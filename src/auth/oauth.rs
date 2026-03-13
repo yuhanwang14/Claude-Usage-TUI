@@ -18,17 +18,24 @@ struct OAuthToken {
 }
 
 fn plan_name_from_credentials(creds: &OAuthToken) -> String {
-    match (
-        creds.subscription_type.as_deref(),
-        creds.rate_limit_tier.as_deref(),
-    ) {
-        (Some("claude_pro"), _) => "Pro".to_string(),
-        (Some("claude_team"), _) => "Team".to_string(),
-        (Some("claude_max"), Some(tier)) => format!("Max ({})", tier),
-        (Some("claude_max"), None) => "Max".to_string(),
-        (_, Some(tier)) => tier.to_string(),
-        _ => "Unknown".to_string(),
+    let sub = creds.subscription_type.as_deref().unwrap_or("pro");
+    let tier = creds.rate_limit_tier.as_deref().unwrap_or("");
+
+    let base = match sub {
+        "max" | "claude_max" => "Max",
+        "pro" | "claude_pro" => "Pro",
+        "team" | "claude_team" => "Team",
+        other => other,
+    };
+
+    // Extract multiplier from tier like "default_claude_max_5x"
+    if let Some(pos) = tier.rfind('_') {
+        let suffix = &tier[pos + 1..];
+        if suffix.ends_with('x') {
+            return format!("{base} {suffix}");
+        }
     }
+    base.to_string()
 }
 
 fn load_credentials_from(path: &std::path::Path) -> Result<(String, String)> {
@@ -45,14 +52,16 @@ fn load_credentials_from(path: &std::path::Path) -> Result<(String, String)> {
         .ok_or_else(|| anyhow!("No accessToken in credentials"))?
         .to_string();
 
-    // Check expiry (expiresAt is in milliseconds)
+    // Don't reject expired tokens locally — let the API decide.
+    // The server may still accept them, and local clock skew causes false rejections.
+    // If truly expired, the API returns 401 and we show "offline" in the status bar.
     if let Some(expires_at) = token.expires_at {
         let now_ms = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
             .as_millis() as i64;
         if expires_at < now_ms {
-            return Err(anyhow!("OAuth token has expired"));
+            eprintln!("Warning: OAuth token may be expired, trying anyway...");
         }
     }
 
