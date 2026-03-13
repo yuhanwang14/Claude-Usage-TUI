@@ -3,18 +3,21 @@ use serde::Deserialize;
 use std::fs;
 
 #[derive(Debug, Deserialize)]
-struct Credentials {
-    #[serde(rename = "accessToken")]
+#[serde(rename_all = "camelCase")]
+struct CredentialsFile {
+    claude_ai_oauth: Option<OAuthToken>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct OAuthToken {
     access_token: Option<String>,
-    #[serde(rename = "expiresAt")]
     expires_at: Option<i64>,
-    #[serde(rename = "subscriptionType")]
     subscription_type: Option<String>,
-    #[serde(rename = "rateLimitTier")]
     rate_limit_tier: Option<String>,
 }
 
-fn plan_name_from_credentials(creds: &Credentials) -> String {
+fn plan_name_from_credentials(creds: &OAuthToken) -> String {
     match (
         creds.subscription_type.as_deref(),
         creds.rate_limit_tier.as_deref(),
@@ -30,26 +33,30 @@ fn plan_name_from_credentials(creds: &Credentials) -> String {
 
 fn load_credentials_from(path: &std::path::Path) -> Result<(String, String)> {
     let contents = fs::read_to_string(path)?;
-    let creds: Credentials = serde_json::from_str(&contents)?;
+    let file: CredentialsFile = serde_json::from_str(&contents)?;
 
-    let access_token = creds
+    let token = file
+        .claude_ai_oauth
+        .ok_or_else(|| anyhow!("No claudeAiOauth in credentials"))?;
+
+    let access_token = token
         .access_token
         .as_deref()
         .ok_or_else(|| anyhow!("No accessToken in credentials"))?
         .to_string();
 
-    // Check expiry
-    if let Some(expires_at) = creds.expires_at {
-        let now = std::time::SystemTime::now()
+    // Check expiry (expiresAt is in milliseconds)
+    if let Some(expires_at) = token.expires_at {
+        let now_ms = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
-            .as_secs() as i64;
-        if expires_at < now {
+            .as_millis() as i64;
+        if expires_at < now_ms {
             return Err(anyhow!("OAuth token has expired"));
         }
     }
 
-    let plan_name = plan_name_from_credentials(&creds);
+    let plan_name = plan_name_from_credentials(&token);
     Ok((access_token, plan_name))
 }
 
