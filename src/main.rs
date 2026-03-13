@@ -25,6 +25,9 @@ use config::Config;
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
 struct Cli {
+    #[command(subcommand)]
+    command: Option<Command>,
+
     /// Session key for cookie-based auth
     #[arg(long)]
     cookie: Option<String>,
@@ -36,6 +39,12 @@ struct Cli {
     /// Refresh interval in seconds (default: 5)
     #[arg(long, short)]
     interval: Option<u64>,
+}
+
+#[derive(clap::Subcommand, Debug)]
+enum Command {
+    /// Authenticate with Claude.ai via browser OAuth
+    Login,
 }
 
 fn is_network_error(e: &anyhow::Error) -> bool {
@@ -63,6 +72,11 @@ fn restore_terminal(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) {
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
+
+    // Handle login subcommand
+    if let Some(Command::Login) = cli.command {
+        return auth::login::run_login();
+    }
 
     // Load config
     let mut config = Config::load().unwrap_or_default();

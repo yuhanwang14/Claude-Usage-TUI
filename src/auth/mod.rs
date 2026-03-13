@@ -1,4 +1,5 @@
 pub mod cookie;
+pub mod login;
 pub mod oauth;
 
 use anyhow::Result;
