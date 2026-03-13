@@ -4,6 +4,174 @@ mod auth;
 mod config;
 mod ui;
 
-fn main() {
-    println!("claude-usage-tui");
+use anyhow::Result;
+use clap::Parser;
+use crossterm::{
+    event::{self, Event, EventStream, KeyCode, KeyEventKind},
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+};
+use futures::StreamExt;
+use ratatui::{backend::CrosstermBackend, Terminal};
+use std::io;
+use tokio::time::{interval, Duration};
+
+use api::ClaudeClient;
+use app::App;
+use auth::resolve_auth;
+use config::Config;
+
+/// Claude.ai usage TUI
+#[derive(Parser, Debug)]
+#[command(author, version, about)]
+struct Cli {
+    /// Session key for cookie-based auth
+    #[arg(long)]
+    cookie: Option<String>,
+
+    /// Organization ID override
+    #[arg(long)]
+    org: Option<String>,
+
+    /// Refresh interval in seconds (default: 5)
+    #[arg(long, short)]
+    interval: Option<u64>,
+}
+
+fn is_network_error(e: &anyhow::Error) -> bool {
+    // Check if the underlying error is a reqwest error caused by a network issue
+    if let Some(re) = e.downcast_ref::<reqwest::Error>() {
+        return re.is_connect() || re.is_timeout() || re.is_request();
+    }
+    false
+}
+
+fn setup_terminal() -> Result<Terminal<CrosstermBackend<io::Stdout>>> {
+    enable_raw_mode()?;
+    let mut stdout = io::stdout();
+    execute!(stdout, EnterAlternateScreen)?;
+    let backend = CrosstermBackend::new(stdout);
+    Ok(Terminal::new(backend)?)
+}
+
+fn restore_terminal(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) {
+    let _ = disable_raw_mode();
+    let _ = execute!(terminal.backend_mut(), LeaveAlternateScreen);
+    let _ = terminal.show_cursor();
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let cli = Cli::parse();
+
+    // Load config
+    let mut config = Config::load().unwrap_or_default();
+
+    // CLI overrides
+    if let Some(interval) = cli.interval {
+        config.refresh_interval = interval;
+    }
+    if let Some(ref org) = cli.org {
+        config.org_id = Some(org.clone());
+    }
+
+    // Resolve auth
+    let auth = resolve_auth(&config, cli.cookie.as_deref())?;
+    let plan_name = auth.plan_name();
+
+    // Create API client (fetches org_id if not provided)
+    let client = ClaudeClient::new(&auth, config.org_id.as_deref()).await?;
+
+    // Build app state
+    let mut app = App::new(config.refresh_interval, plan_name);
+
+    // Set up terminal with panic hook to restore on panic
+    let mut terminal = setup_terminal()?;
+    let orig_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        let _ = disable_raw_mode();
+        let _ = execute!(io::stdout(), LeaveAlternateScreen);
+        orig_hook(info);
+    }));
+
+    // Initial fetch
+    match client.fetch_all().await {
+        Ok(data) => app.update_data(data),
+        Err(e) => app.set_error(is_network_error(&e)),
+    }
+
+    // Event loop
+    let mut event_stream = EventStream::new();
+    let mut refresh_ticker = interval(Duration::from_secs(app.refresh_interval));
+    refresh_ticker.tick().await; // consume the immediate first tick
+
+    loop {
+        // Check minimum terminal size
+        let size = terminal.size()?;
+        if size.width < 40 || size.height < 12 {
+            // Too small — show a message and wait
+            terminal.draw(|f| {
+                let msg = ratatui::widgets::Paragraph::new("Terminal too small (min 40x12)")
+                    .style(ratatui::style::Style::default().fg(ratatui::style::Color::Red));
+                f.render_widget(msg, f.area());
+            })?;
+        } else {
+            terminal.draw(|f| ui::draw(f, &app))?;
+        }
+
+        tokio::select! {
+            // Keyboard / resize events
+            maybe_event = event_stream.next() => {
+                match maybe_event {
+                    Some(Ok(Event::Key(key))) if key.kind == KeyEventKind::Press => {
+                        match key.code {
+                            KeyCode::Char('q') | KeyCode::Char('Q') | KeyCode::Esc => {
+                                app.running = false;
+                            }
+                            KeyCode::Char('r') | KeyCode::Char('R') => {
+                                match client.fetch_all().await {
+                                    Ok(data) => app.update_data(data),
+                                    Err(e) => app.set_error(is_network_error(&e)),
+                                }
+                                // Reset the ticker so we don't double-refresh
+                                refresh_ticker = interval(Duration::from_secs(app.refresh_interval));
+                                refresh_ticker.tick().await;
+                            }
+                            KeyCode::Char('+') | KeyCode::Char('=') => {
+                                app.increase_interval();
+                                refresh_ticker = interval(Duration::from_secs(app.refresh_interval));
+                                refresh_ticker.tick().await;
+                            }
+                            KeyCode::Char('-') => {
+                                app.decrease_interval();
+                                refresh_ticker = interval(Duration::from_secs(app.refresh_interval));
+                                refresh_ticker.tick().await;
+                            }
+                            _ => {}
+                        }
+                    }
+                    Some(Ok(Event::Resize(_, _))) => {
+                        // Will redraw on next loop iteration
+                    }
+                    None => { app.running = false; }
+                    _ => {}
+                }
+            }
+
+            // Periodic refresh
+            _ = refresh_ticker.tick() => {
+                match client.fetch_all().await {
+                    Ok(data) => app.update_data(data),
+                    Err(e) => app.set_error(is_network_error(&e)),
+                }
+            }
+        }
+
+        if !app.running {
+            break;
+        }
+    }
+
+    restore_terminal(&mut terminal);
+    Ok(())
 }
