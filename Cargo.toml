@@ -1,0 +1,28 @@
+[package]
+name = "claude-usage-tui"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ratatui = "0.29"
+crossterm = { version = "0.28", features = ["event-stream"] }
+futures = "0.3"
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+clap = { version = "4", features = ["derive"] }
+dirs = "6"
+toml = "0.8"
+chrono = { version = "0.4", features = ["serde"] }
+open = "5"
+anyhow = "1"
+
+# Pin transitive deps to versions compatible with Rust 1.84
+clap_lex = "=0.7.4"
+clap_builder = "=4.5.27"
+clap_derive = "=4.5.24"
+instability = "=0.3.7"
+darling = "=0.20.10"
+darling_core = "=0.20.10"
+darling_macro = "=0.20.10"
