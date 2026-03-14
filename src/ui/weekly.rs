@@ -7,7 +7,7 @@ use ratatui::{
 };
 
 use crate::app::App;
-use super::theme::{self, BLUE, DIM, SUBTEXT, TEXT};
+use super::theme::{self, BAR_BG, BLUE, DIM, SUBTEXT, TEXT};
 
 pub fn render(f: &mut Frame, area: Rect, app: &App) {
     let block = Block::default()
@@ -54,7 +54,11 @@ fn render_gauge_row(f: &mut Frame, area: Rect, label: &str, pct: f64) {
     f.render_widget(label_widget, row[0]);
 
     let gauge = Gauge::default()
-        .gauge_style(theme::gauge_style(pct))
+        .gauge_style(
+            Style::default()
+                .fg(theme::gauge_color(pct))
+                .bg(BAR_BG),
+        )
         .ratio((pct / 100.0).clamp(0.0, 1.0))
         .label(format!("{:.0}%", pct));
     f.render_widget(gauge, row[1]);

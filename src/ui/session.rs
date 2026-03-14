@@ -7,7 +7,7 @@ use ratatui::{
 };
 
 use crate::app::App;
-use super::theme::{self, BLUE, DIM, SUBTEXT, TEXT};
+use super::theme::{self, BAR_BG, BLUE, DIM, SUBTEXT, TEXT};
 
 pub fn render(f: &mut Frame, area: Rect, app: &App) {
     let block = Block::default()
@@ -35,9 +35,13 @@ pub fn render(f: &mut Frame, area: Rect, app: &App) {
         ])
         .split(inner);
 
-    // Gauge with just percentage
+    // Gauge with just percentage and dark unfilled background
     let gauge = Gauge::default()
-        .gauge_style(theme::gauge_style(pct))
+        .gauge_style(
+            Style::default()
+                .fg(theme::gauge_color(pct))
+                .bg(BAR_BG),
+        )
         .ratio((pct / 100.0).clamp(0.0, 1.0))
         .label(format!("{:.0}%", pct));
     f.render_widget(gauge, chunks[0]);

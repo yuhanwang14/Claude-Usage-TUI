@@ -22,20 +22,26 @@ pub fn render(f: &mut Frame, area: Rect, app: &App) {
         ConnectionStatus::Disconnected => "connecting…",
     };
 
+    let sep = Span::styled(" │ ", Style::default().fg(DIM));
+
     let line = Line::from(vec![
         Span::styled(" ", Style::default()),
         Span::styled(&app.plan_name, Style::default().fg(TEXT)),
-        Span::styled("  ", Style::default()),
+        sep.clone(),
         Span::styled(dot, Style::default().fg(dot_color)),
-        Span::styled(format!(" {}  ", connection_label), Style::default().fg(SUBTEXT)),
+        Span::styled(format!(" {}", connection_label), Style::default().fg(SUBTEXT)),
+        sep.clone(),
         Span::styled(
-            format!("↻ {}s  ", app.refresh_interval),
+            format!("⏱ {}s", app.refresh_interval),
             Style::default().fg(DIM),
         ),
+        sep.clone(),
         Span::styled("q", Style::default().fg(TEXT)),
-        Span::styled(" quit  ", Style::default().fg(DIM)),
+        Span::styled(" quit", Style::default().fg(DIM)),
+        Span::styled("  ", Style::default()),
         Span::styled("+/-", Style::default().fg(TEXT)),
-        Span::styled(" interval  ", Style::default().fg(DIM)),
+        Span::styled(" interval", Style::default().fg(DIM)),
+        Span::styled("  ", Style::default()),
         Span::styled("r", Style::default().fg(TEXT)),
         Span::styled(" refresh", Style::default().fg(DIM)),
     ]);
