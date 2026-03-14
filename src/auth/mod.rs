@@ -21,6 +21,8 @@ pub enum Auth {
 impl Auth {
     pub fn headers(&self) -> HeaderMap {
         let mut headers = HeaderMap::new();
+        headers.insert("anthropic-version", HeaderValue::from_static("2023-06-01"));
+        headers.insert("Content-Type", HeaderValue::from_static("application/json"));
         match self {
             Auth::OAuth { access_token, .. } => {
                 let bearer = format!("Bearer {}", access_token);
