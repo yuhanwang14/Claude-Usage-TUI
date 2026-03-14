@@ -1,5 +1,5 @@
 use ratatui::{
-    layout::Rect,
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::Style,
     text::{Line, Span},
     widgets::Paragraph,
@@ -24,14 +24,14 @@ pub fn render(f: &mut Frame, area: Rect, app: &App) {
 
     let sep = Span::styled(" │ ", Style::default().fg(DIM));
 
-    let line = Line::from(vec![
+    // Left side: auth + connection + interval controls + key hints
+    let left = Line::from(vec![
         Span::styled(" ", Style::default()),
-        Span::styled(&app.plan_name, Style::default().fg(TEXT)),
+        Span::styled(&app.plan_name, Style::default().fg(SUBTEXT)), // dimmed (was TEXT)
         sep.clone(),
         Span::styled(dot, Style::default().fg(dot_color)),
         Span::styled(format!(" {}", connection_label), Style::default().fg(SUBTEXT)),
         sep.clone(),
-        // btop-style clickable interval: - 30s +
         Span::styled("- ", Style::default().fg(RED)),
         Span::styled(format!("{}s", app.refresh_interval), Style::default().fg(TEXT)),
         Span::styled(" +", Style::default().fg(GREEN)),
@@ -43,11 +43,21 @@ pub fn render(f: &mut Frame, area: Rect, app: &App) {
         Span::styled(" refresh", Style::default().fg(DIM)),
     ]);
 
-    let para = Paragraph::new(line);
-    f.render_widget(para, area);
+    // Right side: next refresh countdown
+    let right = Line::from(vec![
+        Span::styled(format!("Next: {}s ", app.refresh_interval), Style::default().fg(DIM)),
+    ]);
 
-    // Store the area so main can use it for mouse click detection
-    // The "-" is at the start of the interval section, "+" is after the number
+    let cols = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Min(1),
+            Constraint::Length(right.width() as u16),
+        ])
+        .split(area);
+
+    f.render_widget(Paragraph::new(left), cols[0]);
+    f.render_widget(Paragraph::new(right).alignment(Alignment::Right), cols[1]);
 }
 
 /// Check if a mouse click at (col, row) hit the "-" or "+" in the status bar.
