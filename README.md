@@ -2,7 +2,7 @@
 
 A btop-style terminal UI for monitoring your Claude.ai usage limits in real-time.
 
-> **Status:** Alpha. Works on macOS. Linux support welcome via PRs.
+> **Status:** Alpha. Works on macOS and Linux.
 
 ## Features
 
@@ -22,7 +22,7 @@ brew tap yuhanwang14/tap
 brew install claude-usage-tui
 ```
 
-### Shell script (macOS/Linux)
+### Shell script (macOS / Linux)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/yuhanwang14/claude-usage-tui/main/install.sh | sh
@@ -34,40 +34,32 @@ curl -fsSL https://raw.githubusercontent.com/yuhanwang14/claude-usage-tui/main/i
 cargo install --git https://github.com/yuhanwang14/claude-usage-tui
 ```
 
-Or build manually:
+## Usage
 
-```bash
-git clone https://github.com/yuhanwang14/claude-usage-tui
-cd claude-usage-tui
-cargo build --release
-```
-
-## Authentication
-
-**Option 1: Claude Code (automatic)**
+### With Claude Code (automatic)
 
 If you have [Claude Code](https://claude.ai/download) installed and logged in, credentials are read from macOS Keychain automatically:
 
 ```bash
-./target/release/claude-usage-tui
+claude-usage-tui
 ```
 
 If your token is expired, re-login:
 
 ```bash
-./target/release/claude-usage-tui login
+claude-usage-tui login
 ```
 
-> Note: OAuth auth shows session % and weekly % only. For full data (spend, balance), use cookie auth.
+> OAuth auth shows session % and weekly % only. For full data (spend, balance), use cookie auth.
 
-**Option 2: Session cookie (full data)**
+### With session cookie (full data)
 
 1. Open https://claude.ai, press F12 (DevTools)
 2. Go to **Application** > **Cookies** > `https://claude.ai`
 3. Copy the `sessionKey` value
 
 ```bash
-./target/release/claude-usage-tui --cookie "sk-ant-sid02-..."
+claude-usage-tui --cookie "sk-ant-sid02-..."
 ```
 
 ## Keybindings
@@ -76,8 +68,8 @@ If your token is expired, re-login:
 |-----|--------|
 | `q` / `Esc` | Quit |
 | `r` | Manual refresh |
-| `+` / `-` | Adjust refresh interval (keyboard) |
-| Mouse click `- +` | Adjust refresh interval (mouse) |
+| `+` / `-` | Adjust refresh interval |
+| Mouse `- +` | Adjust refresh interval (click) |
 
 ## Config
 
@@ -91,8 +83,10 @@ refresh_interval = 30
 
 ## How It Works
 
-- **Cookie auth path:** Calls `claude.ai/api/organizations/{id}/usage` + spend endpoints directly. Returns session %, weekly %, per-model breakdown, spend, and balance.
-- **OAuth auth path:** Sends a minimal request to `api.anthropic.com/v1/messages` and reads `anthropic-ratelimit-unified-*` response headers. Returns session % and weekly % only.
+| Auth method | Data source | What you get |
+|-------------|------------|--------------|
+| **Cookie** | `claude.ai/api/organizations/{id}/usage` | Session %, weekly %, per-model, spend, balance |
+| **OAuth** | `api.anthropic.com/v1/messages` headers | Session % and weekly % only |
 
 ## Contributing
 
