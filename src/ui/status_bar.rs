@@ -31,16 +31,13 @@ pub fn render(f: &mut Frame, area: Rect, app: &App) {
         Span::styled(dot, Style::default().fg(dot_color)),
         Span::styled(format!(" {}", connection_label), Style::default().fg(SUBTEXT)),
         sep.clone(),
-        Span::styled(
-            format!("⏱ {}s", app.refresh_interval),
-            Style::default().fg(DIM),
-        ),
+        // btop-style clickable interval: - 30s +
+        Span::styled("- ", Style::default().fg(RED)),
+        Span::styled(format!("{}s", app.refresh_interval), Style::default().fg(TEXT)),
+        Span::styled(" +", Style::default().fg(GREEN)),
         sep.clone(),
         Span::styled("q", Style::default().fg(TEXT)),
         Span::styled(" quit", Style::default().fg(DIM)),
-        Span::styled("  ", Style::default()),
-        Span::styled("+/-", Style::default().fg(TEXT)),
-        Span::styled(" interval", Style::default().fg(DIM)),
         Span::styled("  ", Style::default()),
         Span::styled("r", Style::default().fg(TEXT)),
         Span::styled(" refresh", Style::default().fg(DIM)),
@@ -48,4 +45,38 @@ pub fn render(f: &mut Frame, area: Rect, app: &App) {
 
     let para = Paragraph::new(line);
     f.render_widget(para, area);
+
+    // Store the area so main can use it for mouse click detection
+    // The "-" is at the start of the interval section, "+" is after the number
+}
+
+/// Check if a mouse click at (col, row) hit the "-" or "+" in the status bar.
+/// Returns Some(true) for "+", Some(false) for "-", None if miss.
+pub fn check_interval_click(area: Rect, col: u16, row: u16, app: &App) -> Option<bool> {
+    if row != area.y {
+        return None;
+    }
+
+    // Calculate approximate positions of - and + in the status bar
+    // " {plan_name} │ ● {status} │ - {N}s + │ ..."
+    let plan_len = app.plan_name.len() as u16;
+    let status_label = match app.connection {
+        ConnectionStatus::Online => "online",
+        ConnectionStatus::Offline => "offline",
+        ConnectionStatus::Disconnected => "connecting…",
+    };
+    let status_len = status_label.len() as u16;
+
+    // Position: " " + plan + " │ " + "● " + status + " │ " + "- "
+    let minus_start = area.x + 1 + plan_len + 3 + 2 + status_len + 3;
+    let interval_str_len = format!("{}s", app.refresh_interval).len() as u16;
+    let plus_start = minus_start + 2 + interval_str_len + 1;
+
+    if col >= minus_start && col < minus_start + 2 {
+        Some(false) // clicked "-"
+    } else if col >= plus_start && col <= plus_start + 1 {
+        Some(true) // clicked "+"
+    } else {
+        None
+    }
 }

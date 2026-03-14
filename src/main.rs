@@ -58,14 +58,14 @@ fn is_network_error(e: &anyhow::Error) -> bool {
 fn setup_terminal() -> Result<Terminal<CrosstermBackend<io::Stdout>>> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen)?;
+    execute!(stdout, EnterAlternateScreen, crossterm::event::EnableMouseCapture)?;
     let backend = CrosstermBackend::new(stdout);
     Ok(Terminal::new(backend)?)
 }
 
 fn restore_terminal(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) {
     let _ = disable_raw_mode();
-    let _ = execute!(terminal.backend_mut(), LeaveAlternateScreen);
+    let _ = execute!(terminal.backend_mut(), LeaveAlternateScreen, crossterm::event::DisableMouseCapture);
     let _ = terminal.show_cursor();
 }
 
@@ -162,6 +162,22 @@ async fn main() -> Result<()> {
                                 refresh_ticker.tick().await;
                             }
                             _ => {}
+                        }
+                    }
+                    Some(Ok(Event::Mouse(mouse))) => {
+                        if mouse.kind == crossterm::event::MouseEventKind::Down(crossterm::event::MouseButton::Left) {
+                            // Check if click is on the status bar - / + buttons
+                            let size = terminal.size()?;
+                            let status_bar_area = ratatui::layout::Rect::new(0, size.height.saturating_sub(1), size.width, 1);
+                            if let Some(increase) = ui::status_bar::check_interval_click(status_bar_area, mouse.column, mouse.row, &app) {
+                                if increase {
+                                    app.increase_interval();
+                                } else {
+                                    app.decrease_interval();
+                                }
+                                refresh_ticker = interval(Duration::from_secs(app.refresh_interval));
+                                refresh_ticker.tick().await;
+                            }
                         }
                     }
                     Some(Ok(Event::Resize(_, _))) => {
