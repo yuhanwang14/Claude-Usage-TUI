@@ -52,15 +52,31 @@ claude-usage-tui login
 
 > OAuth auth shows session % and weekly % only. For full data (spend, balance), use cookie auth.
 
-### With session cookie (full data)
+### With Chrome (easiest, full data)
+
+Auto-extracts session cookie from Chrome — no copy-paste needed:
+
+```bash
+claude-usage-tui --browser chrome
+```
+
+Save it so you never need to do it again:
+
+```bash
+claude-usage-tui --browser chrome --save
+```
+
+### With session cookie (manual)
 
 1. Open https://claude.ai, press F12 (DevTools)
 2. Go to **Application** > **Cookies** > `https://claude.ai`
 3. Copy the `sessionKey` value
 
 ```bash
-claude-usage-tui --cookie "sk-ant-sid02-..."
+claude-usage-tui --cookie "sk-ant-sid02-..." --save
 ```
+
+> `--save` persists the cookie to config. After that, just run `claude-usage-tui`.
 
 ## Keybindings
 
