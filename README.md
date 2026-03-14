@@ -2,15 +2,15 @@
 
 A btop-style terminal UI for monitoring your Claude.ai usage limits in real-time.
 
-> **Status:** Alpha. Works on macOS and Linux.
+> **Status:** Beta. Works on macOS and Linux.
 
 ## Features
 
 - **Session usage** — 5-hour rolling window with gauge and reset countdown
 - **Weekly limits** — All models, Sonnet, and Opus breakdowns
-- **Extra spend** — Monthly spend tracking with balance (cookie auth)
+- **Extra spend** — Monthly spend tracking with balance
 - **btop aesthetics** — Rounded borders, color-coded gauges, compact layout
-- **Dual auth** — Claude Code OAuth (auto) or session cookie (manual)
+- **Auto cookie extraction** — `--browser chrome` reads your session cookie automatically
 - **Mouse support** — Click `- 30s +` in status bar to adjust refresh interval
 
 ## Install
@@ -34,49 +34,35 @@ curl -fsSL https://raw.githubusercontent.com/yuhanwang14/claude-usage-tui/main/i
 cargo install --git https://github.com/yuhanwang14/claude-usage-tui
 ```
 
-## Usage
+## Quick Start
 
-### With Claude Code (automatic)
+### Recommended: Auto-extract from Chrome
 
-If you have [Claude Code](https://claude.ai/download) installed and logged in, credentials are read from macOS Keychain automatically:
+```bash
+# Extract cookie from Chrome and save it — one-time setup
+claude-usage-tui --browser chrome --save
+
+# After that, just run:
+claude-usage-tui
+```
+
+### With Claude Code (OAuth, limited data)
+
+If you have [Claude Code](https://claude.ai/download) installed:
 
 ```bash
 claude-usage-tui
 ```
 
-If your token is expired, re-login:
+> OAuth only shows session % and weekly %. Use `--browser chrome` for full data (spend, balance).
 
-```bash
-claude-usage-tui login
-```
+### Manual cookie
 
-> OAuth auth shows session % and weekly % only. For full data (spend, balance), use cookie auth.
-
-### With Chrome (easiest, full data)
-
-Auto-extracts session cookie from Chrome — no copy-paste needed:
-
-```bash
-claude-usage-tui --browser chrome
-```
-
-Save it so you never need to do it again:
-
-```bash
-claude-usage-tui --browser chrome --save
-```
-
-### With session cookie (manual)
-
-1. Open https://claude.ai, press F12 (DevTools)
-2. Go to **Application** > **Cookies** > `https://claude.ai`
-3. Copy the `sessionKey` value
+1. Open https://claude.ai → F12 → **Application** → **Cookies** → copy `sessionKey`
 
 ```bash
 claude-usage-tui --cookie "sk-ant-sid02-..." --save
 ```
-
-> `--save` persists the cookie to config. After that, just run `claude-usage-tui`.
 
 ## Keybindings
 
@@ -101,8 +87,8 @@ refresh_interval = 30
 
 | Auth method | Data source | What you get |
 |-------------|------------|--------------|
-| **Cookie** | `claude.ai/api/organizations/{id}/usage` | Session %, weekly %, per-model, spend, balance |
-| **OAuth** | `api.anthropic.com/v1/messages` headers | Session % and weekly % only |
+| **Cookie** (`--browser chrome` or `--cookie`) | `claude.ai/api/organizations/{id}/usage` | Session %, weekly %, per-model, spend, balance |
+| **OAuth** (Claude Code) | `api.anthropic.com/v1/messages` headers | Session % and weekly % only |
 
 ## Contributing
 
