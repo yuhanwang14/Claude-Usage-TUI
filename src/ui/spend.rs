@@ -30,10 +30,12 @@ pub fn render(f: &mut Frame, area: Rect, app: &App) {
         let limit = app.data.spend_limit_dollars.unwrap_or(0.0);
         let pct = if limit > 0.0 { (current / limit * 100.0).clamp(0.0, 100.0) } else { 0.0 };
 
-        // Determine currency symbol: credit_remaining uses same currency from API
-        // The spend data doesn't carry a currency symbol directly in UsageData,
-        // so default to "$" but prefer "£" if we can detect GBP-like values.
-        let sym = "$";
+        let sym = match app.data.spend_currency.as_deref() {
+            Some("GBP") => "£",
+            Some("EUR") => "€",
+            Some("JPY") | Some("CNY") => "¥",
+            _ => "$",
+        };
 
         let balance = limit - current;
 

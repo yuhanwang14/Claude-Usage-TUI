@@ -194,4 +194,7 @@ pub struct UsageData {
     pub credit_remaining_dollars: Option<f64>,
     pub credit_grant_dollars: Option<f64>,
     pub credit_used_dollars: Option<f64>,
+
+    // Currency
+    pub spend_currency: Option<String>,
 }

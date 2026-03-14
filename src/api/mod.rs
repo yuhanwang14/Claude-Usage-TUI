@@ -89,13 +89,14 @@ impl ClaudeClient {
             data.weekly_sonnet_percent = bucket.utilization;
         }
 
-        // Spend limit
-        data.spend_limit_dollars = spend.monthly_credit_limit;
-        data.current_spend_dollars = spend.used_credits;
+        // Spend limit — API returns cents, convert to currency units
+        data.spend_limit_dollars = spend.monthly_credit_limit.map(|v| v / 100.0);
+        data.current_spend_dollars = spend.used_credits.map(|v| v / 100.0);
         data.spend_limit_enabled = spend.is_enabled;
+        data.spend_currency = spend.currency;
 
-        // Credit grant
-        data.credit_remaining_dollars = credit.remaining_balance;
+        // Credit grant — also in cents
+        data.credit_remaining_dollars = credit.remaining_balance.map(|v| v / 100.0);
 
         Ok(data)
     }
