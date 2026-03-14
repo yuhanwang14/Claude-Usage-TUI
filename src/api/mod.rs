@@ -61,11 +61,12 @@ impl ClaudeClient {
             data.weekly_reset_at = Some(format_unix_timestamp(weekly_reset_ts as i64));
         }
 
-        // Log all rate-limit headers for debugging
-        for (name, value) in headers.iter() {
-            if name.as_str().starts_with("anthropic-ratelimit") {
-                eprintln!("  {}: {}", name, value.to_str().unwrap_or("?"));
-            }
+        // Also parse overage info from headers
+        let overage_status = headers.get("anthropic-ratelimit-unified-overage-status")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("");
+        if overage_status == "allowed" {
+            data.spend_limit_enabled = Some(true);
         }
 
         Ok(data)
