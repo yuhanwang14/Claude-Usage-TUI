@@ -11,7 +11,7 @@ pub struct Config {
 }
 
 fn default_refresh_interval() -> u64 {
-    5
+    30
 }
 
 impl Default for Config {
