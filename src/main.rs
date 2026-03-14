@@ -1,6 +1,7 @@
 mod api;
 mod app;
 mod auth;
+mod browser;
 mod config;
 mod ui;
 
@@ -43,6 +44,10 @@ struct Cli {
     /// Save cookie to config for future use
     #[arg(long)]
     save: bool,
+
+    /// Extract session cookie from browser ("chrome")
+    #[arg(long)]
+    browser: Option<String>,
 }
 
 #[derive(clap::Subcommand, Debug)]
@@ -93,14 +98,40 @@ async fn main() -> Result<()> {
         config.org_id = Some(org.clone());
     }
 
+    // Extract cookie from browser if requested
+    let browser_cookie = if let Some(ref browser_name) = cli.browser {
+        match browser_name.as_str() {
+            "chrome" => {
+                eprintln!("Extracting session cookie from Chrome...");
+                match browser::extract_chrome_cookie() {
+                    Ok(cookie) => {
+                        eprintln!("Cookie extracted successfully.");
+                        Some(cookie)
+                    }
+                    Err(e) => {
+                        return Err(e.context("Failed to extract cookie from Chrome"));
+                    }
+                }
+            }
+            other => {
+                return Err(anyhow::anyhow!("Unsupported browser: {}. Supported: chrome", other));
+            }
+        }
+    } else {
+        None
+    };
+
+    // Use browser cookie if available, otherwise CLI cookie
+    let effective_cookie = browser_cookie.as_deref().or(cli.cookie.as_deref());
+
     // Resolve auth
-    let auth = resolve_auth(&config, cli.cookie.as_deref())?;
+    let auth = resolve_auth(&config, effective_cookie)?;
     let plan_name = auth.plan_name();
 
     // Save cookie if --save was passed
     if cli.save {
-        if let Some(ref cookie) = cli.cookie {
-            Config::save_session_key(cookie)?;
+        if let Some(key) = effective_cookie {
+            Config::save_session_key(key)?;
         }
     }
 
