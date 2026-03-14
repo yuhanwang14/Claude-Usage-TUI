@@ -2,7 +2,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, BorderType, Borders, Gauge, Paragraph, Sparkline},
+    widgets::{Block, BorderType, Borders, Gauge, Paragraph},
     Frame,
 };
 
@@ -28,38 +28,28 @@ pub fn render(f: &mut Frame, area: Rect, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
+            Constraint::Length(1), // label "5-hour rolling window"
             Constraint::Length(1), // gauge
-            Constraint::Length(1), // spacer
             Constraint::Length(1), // reset text
-            Constraint::Min(1),    // sparkline
+            Constraint::Min(0),
         ])
         .split(inner);
 
-    // Gauge with just percentage and dark unfilled background
+    // Subtitle
+    let subtitle = Paragraph::new(Span::styled(
+        "5-hour rolling window",
+        Style::default().fg(SUBTEXT),
+    ));
+    f.render_widget(subtitle, chunks[0]);
+
+    // Gauge
     let gauge = Gauge::default()
-        .gauge_style(
-            Style::default()
-                .fg(theme::gauge_color(pct))
-                .bg(BAR_BG),
-        )
+        .gauge_style(Style::default().fg(theme::gauge_color(pct)).bg(BAR_BG))
         .ratio((pct / 100.0).clamp(0.0, 1.0))
         .label(format!("{:.0}%", pct));
-    f.render_widget(gauge, chunks[0]);
+    f.render_widget(gauge, chunks[1]);
 
     // Reset timer
     let reset_line = Paragraph::new(Span::styled(reset_str, Style::default().fg(SUBTEXT)));
     f.render_widget(reset_line, chunks[2]);
-
-    // Sparkline — only show when we have enough data points for it to be meaningful
-    if app.sparkline_data.len() >= 3 {
-        let spark_data: Vec<u64> = app
-            .sparkline_data
-            .iter()
-            .map(|v| (*v * 10.0).max(0.0) as u64)
-            .collect();
-        let sparkline = Sparkline::default()
-            .style(Style::default().fg(BLUE))
-            .data(&spark_data);
-        f.render_widget(sparkline, chunks[3]);
-    }
 }
