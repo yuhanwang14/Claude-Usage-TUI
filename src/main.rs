@@ -164,10 +164,10 @@ async fn main() -> Result<()> {
     loop {
         // Check minimum terminal size
         let size = terminal.size()?;
-        if size.width < 40 || size.height < 12 {
+        if size.width < 60 || size.height < 8 {
             // Too small — show a message and wait
             terminal.draw(|f| {
-                let msg = ratatui::widgets::Paragraph::new("Terminal too small (min 40x12)")
+                let msg = ratatui::widgets::Paragraph::new("Terminal too small (min 60x8)")
                     .style(ratatui::style::Style::default().fg(ratatui::style::Color::Red));
                 f.render_widget(msg, f.area());
             })?;
