@@ -97,3 +97,64 @@ jobs:
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
+
+  update-homebrew:
+    name: Update Homebrew Formula
+    needs: release
+    runs-on: ubuntu-latest
+    if: "!contains(github.ref_name, '-')"
+    steps:
+      - name: Compute SHA256 and update formula
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          BASE="https://github.com/yuhanwang14/claude-usage-tui/releases/download/${GITHUB_REF_NAME}"
+
+          # Download and hash macOS binaries
+          curl -sL "${BASE}/claude-usage-tui-aarch64-apple-darwin.tar.gz" -o arm64.tar.gz
+          curl -sL "${BASE}/claude-usage-tui-x86_64-apple-darwin.tar.gz" -o x64.tar.gz
+          ARM_SHA=$(sha256sum arm64.tar.gz | awk '{print $1}')
+          X64_SHA=$(sha256sum x64.tar.gz | awk '{print $1}')
+
+          echo "arm64 SHA256: $ARM_SHA"
+          echo "x86_64 SHA256: $X64_SHA"
+
+          # Generate formula
+          FORMULA=$(cat <<RUBY
+          class ClaudeUsageTui < Formula
+            desc "btop-style terminal UI for monitoring Claude.ai usage limits in real-time"
+            homepage "https://github.com/yuhanwang14/claude-usage-tui"
+            version "${VERSION}"
+            license "MIT"
+
+            on_macos do
+              on_arm do
+                url "https://github.com/yuhanwang14/claude-usage-tui/releases/latest/download/claude-usage-tui-aarch64-apple-darwin.tar.gz"
+                sha256 "${ARM_SHA}"
+              end
+
+              on_intel do
+                url "https://github.com/yuhanwang14/claude-usage-tui/releases/latest/download/claude-usage-tui-x86_64-apple-darwin.tar.gz"
+                sha256 "${X64_SHA}"
+              end
+            end
+
+            def install
+              bin.install "claude-usage-tui"
+            end
+
+            test do
+              assert_match version.to_s, shell_output("#{bin}/claude-usage-tui --version 2>&1", 0)
+            end
+          end
+          RUBY
+          )
+
+          # Update formula in homebrew-tap repo via GitHub API
+          FILE_SHA=$(gh api repos/yuhanwang14/homebrew-tap/contents/Formula/claude-usage-tui.rb --jq '.sha')
+          echo "$FORMULA" | gh api repos/yuhanwang14/homebrew-tap/contents/Formula/claude-usage-tui.rb \
+            --method PUT \
+            -f message="Update to v${VERSION}" \
+            -f content="$(echo "$FORMULA" | base64 -w0)" \
+            -f sha="$FILE_SHA"
