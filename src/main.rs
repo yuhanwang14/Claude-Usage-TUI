@@ -39,6 +39,10 @@ struct Cli {
     /// Refresh interval in seconds (default: 5)
     #[arg(long, short)]
     interval: Option<u64>,
+
+    /// Save cookie to config for future use
+    #[arg(long)]
+    save: bool,
 }
 
 #[derive(clap::Subcommand, Debug)]
@@ -92,6 +96,13 @@ async fn main() -> Result<()> {
     // Resolve auth
     let auth = resolve_auth(&config, cli.cookie.as_deref())?;
     let plan_name = auth.plan_name();
+
+    // Save cookie if --save was passed
+    if cli.save {
+        if let Some(ref cookie) = cli.cookie {
+            Config::save_session_key(cookie)?;
+        }
+    }
 
     // Create API client (fetches org_id if not provided)
     let client = ClaudeClient::new(&auth, config.org_id.as_deref()).await?;

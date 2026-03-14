@@ -38,4 +38,43 @@ impl Config {
             _ => Ok(Config::default()),
         }
     }
+
+    /// Save a session key to the config file.
+    pub fn save_session_key(key: &str) -> Result<()> {
+        let dir = dirs::config_dir()
+            .ok_or_else(|| anyhow::anyhow!("No config directory"))?
+            .join("claude-usage-tui");
+        fs::create_dir_all(&dir)?;
+        let path = dir.join("config.toml");
+
+        // Read existing or create new
+        let mut content = if path.exists() {
+            fs::read_to_string(&path)?
+        } else {
+            String::new()
+        };
+
+        // Replace or append session_key
+        if content.contains("session_key") {
+            // Replace existing line
+            let lines: Vec<&str> = content.lines().collect();
+            let new_lines: Vec<String> = lines
+                .iter()
+                .map(|l| {
+                    if l.trim_start().starts_with("session_key") || l.trim_start().starts_with("# session_key") {
+                        format!("session_key = \"{}\"", key)
+                    } else {
+                        l.to_string()
+                    }
+                })
+                .collect();
+            content = new_lines.join("\n") + "\n";
+        } else {
+            content.push_str(&format!("session_key = \"{}\"\n", key));
+        }
+
+        fs::write(&path, &content)?;
+        eprintln!("Cookie saved to {}", path.display());
+        Ok(())
+    }
 }
