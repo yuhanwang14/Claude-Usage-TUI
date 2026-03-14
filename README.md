@@ -15,7 +15,26 @@ A btop-style terminal UI for monitoring your Claude.ai usage limits in real-time
 
 ## Install
 
-Build from source:
+### Homebrew (macOS)
+
+```bash
+brew tap yuhanwang14/tap
+brew install claude-usage-tui
+```
+
+### Shell script (macOS/Linux)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/yuhanwang14/claude-usage-tui/main/install.sh | sh
+```
+
+### From source
+
+```bash
+cargo install --git https://github.com/yuhanwang14/claude-usage-tui
+```
+
+Or build manually:
 
 ```bash
 git clone https://github.com/yuhanwang14/claude-usage-tui
