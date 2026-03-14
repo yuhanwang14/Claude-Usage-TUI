@@ -20,7 +20,7 @@ pub fn run_login() -> Result<()> {
     // 1. Bind to a random port
     let listener = TcpListener::bind("127.0.0.1:0")?;
     let port = listener.local_addr()?.port();
-    let redirect_uri = format!("http://127.0.0.1:{port}/callback");
+    let redirect_uri = format!("http://localhost:{port}/callback");
 
     // 2. Generate state parameter for CSRF protection
     let state = format!(
@@ -35,14 +35,17 @@ pub fn run_login() -> Result<()> {
     let code_verifier = generate_code_verifier();
     let code_challenge = generate_code_challenge(&code_verifier);
 
-    // 4. Build authorize URL
+    // 4. Build authorize URL using proper URL encoding
     let auth_url = format!(
-        "{AUTHORIZE_URL}?response_type=code&client_id={OAUTH_CLIENT_ID}\
-        &redirect_uri={redirect_uri}\
-        &scope=user:inference+user:profile\
+        "{AUTHORIZE_URL}?response_type=code\
+        &client_id={OAUTH_CLIENT_ID}\
+        &redirect_uri={}\
+        &scope={}\
         &state={state}\
         &code_challenge={code_challenge}\
-        &code_challenge_method=S256"
+        &code_challenge_method=S256",
+        urlencoded(&redirect_uri),
+        urlencoded("user:inference user:profile"),
     );
 
     println!("Opening browser for authentication...");
@@ -262,4 +265,15 @@ fn sha256(data: &[u8]) -> [u8; 32] {
         result[i*4..i*4+4].copy_from_slice(&val.to_be_bytes());
     }
     result
+}
+
+fn urlencoded(s: &str) -> String {
+    s.bytes()
+        .map(|b| match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                String::from(b as char)
+            }
+            _ => format!("%{:02X}", b),
+        })
+        .collect()
 }
