@@ -2,6 +2,7 @@ use anyhow::{anyhow, Context, Result};
 use serde::Deserialize;
 use std::io::{BufRead, BufReader, Write};
 use std::net::TcpListener;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 const OAUTH_CLIENT_ID: &str = "9d1c250a-e61b-44d9-88ed-5944d1962f5e";
 const AUTHORIZE_URL: &str = "https://platform.claude.com/oauth/authorize";
@@ -21,9 +22,18 @@ pub fn run_login() -> Result<()> {
     let port = listener.local_addr()?.port();
     let redirect_uri = format!("http://127.0.0.1:{port}/callback");
 
-    // 2. Build authorize URL
+    // 2. Generate state parameter for CSRF protection
+    let state = format!(
+        "claude-usage-tui-{}",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis()
+    );
+
+    // 3. Build authorize URL
     let auth_url = format!(
-        "{AUTHORIZE_URL}?response_type=code&client_id={OAUTH_CLIENT_ID}&redirect_uri={redirect_uri}&scope=user:inference+user:profile"
+        "{AUTHORIZE_URL}?response_type=code&client_id={OAUTH_CLIENT_ID}&redirect_uri={redirect_uri}&scope=user:inference+user:profile&state={state}"
     );
 
     println!("Opening browser for authentication...");
@@ -43,24 +53,31 @@ pub fn run_login() -> Result<()> {
     let mut request_line = String::new();
     reader.read_line(&mut request_line)?;
 
-    // Parse the auth code from "GET /callback?code=XXX HTTP/1.1"
-    let code = request_line
+    // Parse query params from "GET /callback?code=XXX&state=YYY HTTP/1.1"
+    let query_string = request_line
         .split_whitespace()
-        .nth(1) // the path
-        .and_then(|path| {
-            path.split('?')
-                .nth(1)
-                .and_then(|query| {
-                    query.split('&').find_map(|param| {
-                        let mut kv = param.splitn(2, '=');
-                        match (kv.next(), kv.next()) {
-                            (Some("code"), Some(val)) => Some(val.to_string()),
-                            _ => None,
-                        }
-                    })
-                })
+        .nth(1)
+        .and_then(|path| path.split('?').nth(1))
+        .unwrap_or("");
+
+    let params: std::collections::HashMap<&str, &str> = query_string
+        .split('&')
+        .filter_map(|param| {
+            let mut kv = param.splitn(2, '=');
+            Some((kv.next()?, kv.next()?))
         })
-        .ok_or_else(|| anyhow!("No authorization code in callback"))?;
+        .collect();
+
+    // Verify state to prevent CSRF
+    let returned_state = params.get("state").ok_or_else(|| anyhow!("Missing state in callback"))?;
+    if *returned_state != state {
+        return Err(anyhow!("State mismatch — possible CSRF attack"));
+    }
+
+    let code = params
+        .get("code")
+        .ok_or_else(|| anyhow!("No authorization code in callback"))?
+        .to_string();
 
     // 5. Send success response to browser
     let response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n\
