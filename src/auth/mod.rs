@@ -27,6 +27,10 @@ impl Auth {
                 if let Ok(val) = HeaderValue::from_str(&bearer) {
                     headers.insert(AUTHORIZATION, val);
                 }
+                headers.insert(
+                    "anthropic-beta",
+                    HeaderValue::from_static("oauth-2025-04-20"),
+                );
             }
             Auth::Cookie { session_key } => {
                 let cookie_val = format!("sessionKey={}", session_key);
