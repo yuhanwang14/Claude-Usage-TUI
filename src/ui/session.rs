@@ -50,8 +50,8 @@ pub fn render(f: &mut Frame, area: Rect, app: &App) {
     let reset_line = Paragraph::new(Span::styled(reset_str, Style::default().fg(SUBTEXT)));
     f.render_widget(reset_line, chunks[2]);
 
-    // Sparkline
-    if !app.sparkline_data.is_empty() {
+    // Sparkline — only show when we have enough data points for it to be meaningful
+    if app.sparkline_data.len() >= 3 {
         let spark_data: Vec<u64> = app
             .sparkline_data
             .iter()
