@@ -12,8 +12,6 @@ pub enum ConnectionStatus {
 pub struct App {
     pub data: UsageData,
     pub sparkline_data: Vec<f64>,
-    pub sparkline_resets: Vec<bool>,
-    pending_reset: bool,
     pub connection: ConnectionStatus,
     pub refresh_interval: u64,
     pub plan_name: String,
@@ -25,8 +23,6 @@ impl App {
         Self {
             data: UsageData::default(),
             sparkline_data: Vec::new(),
-            sparkline_resets: Vec::new(),
-            pending_reset: false,
             connection: ConnectionStatus::Disconnected,
             refresh_interval,
             plan_name,
@@ -38,20 +34,10 @@ impl App {
         // Push current session usage into sparkline history before updating
         if let Some(pct) = self.data.session_percent_used {
             self.sparkline_data.push(pct);
-            self.sparkline_resets.push(self.pending_reset);
-            self.pending_reset = false;
             // Keep last 60 data points
             if self.sparkline_data.len() > 60 {
                 self.sparkline_data.remove(0);
-                self.sparkline_resets.remove(0);
             }
-        }
-        // Detect reset: session_reset_at changed
-        if self.data.session_reset_at.is_some()
-            && data.session_reset_at.is_some()
-            && self.data.session_reset_at != data.session_reset_at
-        {
-            self.pending_reset = true;
         }
         self.data = data;
         self.connection = ConnectionStatus::Online;
