@@ -7,7 +7,7 @@ use ratatui::{
 };
 
 use crate::app::App;
-use super::theme::{self, BLUE, DIM, GREEN, SUBTEXT, TEXT};
+use super::theme::{self, BLUE, DIM, GREEN, SUBTEXT, TEXT, YELLOW};
 
 pub fn render(f: &mut Frame, area: Rect, app: &App) {
     let block = Block::default()
@@ -57,6 +57,20 @@ pub fn render(f: &mut Frame, area: Rect, app: &App) {
             .max(100)
             .style(Style::default().fg(GREEN));
         f.render_widget(sparkline, chunks[2]);
+
+        // Overlay reset markers (vertical dashed lines)
+        let area_w = chunks[2].width as usize;
+        let data_len = app.sparkline_resets.len();
+        let visible_start = data_len.saturating_sub(area_w);
+        for (i, is_reset) in app.sparkline_resets.iter().enumerate() {
+            if *is_reset && i >= visible_start {
+                let x = chunks[2].x + (i - visible_start) as u16;
+                for y in 0..chunks[2].height {
+                    let cell = &mut f.buffer_mut()[(x, chunks[2].y + y)];
+                    cell.set_symbol("┆").set_style(Style::default().fg(YELLOW));
+                }
+            }
+        }
     }
 
     // Reset timer (anchored to bottom)
