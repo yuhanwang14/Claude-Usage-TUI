@@ -109,7 +109,7 @@ jobs:
           GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          BASE="https://github.com/yuhanwang14/Claude-Usage-TUI/releases/download/${GITHUB_REF_NAME}"
+          BASE="https://github.com/yuhanwang14/claude-usage-tui/releases/download/${GITHUB_REF_NAME}"
 
           # Download and hash macOS binaries
           curl -sL "${BASE}/claude-usage-tui-aarch64-apple-darwin.tar.gz" -o arm64.tar.gz
@@ -124,18 +124,18 @@ jobs:
           FORMULA=$(cat <<RUBY
           class ClaudeUsageTui < Formula
             desc "btop-style terminal UI for monitoring Claude.ai usage limits in real-time"
-            homepage "https://github.com/yuhanwang14/Claude-Usage-TUI"
+            homepage "https://github.com/yuhanwang14/claude-usage-tui"
             version "${VERSION}"
             license "MIT"
 
             on_macos do
               on_arm do
-                url "https://github.com/yuhanwang14/Claude-Usage-TUI/releases/latest/download/claude-usage-tui-aarch64-apple-darwin.tar.gz"
+                url "https://github.com/yuhanwang14/claude-usage-tui/releases/latest/download/claude-usage-tui-aarch64-apple-darwin.tar.gz"
                 sha256 "${ARM_SHA}"
               end
 
               on_intel do
-                url "https://github.com/yuhanwang14/Claude-Usage-TUI/releases/latest/download/claude-usage-tui-x86_64-apple-darwin.tar.gz"
+                url "https://github.com/yuhanwang14/claude-usage-tui/releases/latest/download/claude-usage-tui-x86_64-apple-darwin.tar.gz"
                 sha256 "${X64_SHA}"
               end
             end
