@@ -25,13 +25,13 @@ brew install claude-usage-tui
 ### Shell script (macOS / Linux)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/yuhanwang14/claude-usage-tui/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/yuhanwang14/Claude-Usage-TUI/main/install.sh | sh
 ```
 
 ### From source
 
 ```bash
-cargo install --git https://github.com/yuhanwang14/claude-usage-tui
+cargo install --git https://github.com/yuhanwang14/Claude-Usage-TUI
 ```
 
 ## Quick Start

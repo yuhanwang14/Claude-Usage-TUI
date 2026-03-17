@@ -12,7 +12,7 @@ Thanks for your interest in contributing to claude-usage-tui!
 ### Build & Run
 
 ```bash
-git clone https://github.com/yuhanwang14/claude-usage-tui
+git clone https://github.com/yuhanwang14/Claude-Usage-TUI
 cd claude-usage-tui
 cargo build
 cargo run -- --cookie "your-session-key"

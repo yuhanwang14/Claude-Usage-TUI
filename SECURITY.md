@@ -4,7 +4,7 @@
 
 **Do NOT open a public issue for security vulnerabilities.**
 
-Please report security issues by opening a [GitHub Security Advisory](https://github.com/yuhanwang14/claude-usage-tui/security/advisories/new).
+Please report security issues by opening a [GitHub Security Advisory](https://github.com/yuhanwang14/Claude-Usage-TUI/security/advisories/new).
 
 Include:
 - Description of the vulnerability

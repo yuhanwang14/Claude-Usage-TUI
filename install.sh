@@ -1,10 +1,10 @@
 #!/bin/sh
 # install.sh — Install claude-usage-tui from GitHub Releases
-# Usage: curl -fsSL https://raw.githubusercontent.com/yuhanwang14/claude-usage-tui/main/install.sh | sh
+# Usage: curl -fsSL https://raw.githubusercontent.com/yuhanwang14/Claude-Usage-TUI/main/install.sh | sh
 
 set -e
 
-REPO="yuhanwang14/claude-usage-tui"
+REPO="yuhanwang14/Claude-Usage-TUI"
 BINARY="claude-usage-tui"
 
 # Detect OS
